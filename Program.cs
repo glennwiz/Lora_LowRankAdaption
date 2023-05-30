@@ -1,40 +1,49 @@
 ﻿using System;
+using MathNet.Numerics;
 using MathNet.Numerics.LinearAlgebra;
 
 class Program
 {
     static void Main(string[] args)
     {
-        // Create a 10x10 sample matrix
-        Matrix<double> A = Matrix<double>.Build.DenseOfArray(new double[,] {
-            { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 },
-            { 11, 12, 13, 14, 15, 16, 17, 18, 19, 20 },
-            { 21, 22, 23, 24, 25, 26, 27, 28, 29, 30 },
-            { 31, 32, 33, 34, 35, 36, 37, 38, 39, 40 },
-            { 41, 42, 43, 44, 45, 46, 47, 48, 49, 50 },
-            { 51, 52, 53, 54, 55, 56, 57, 58, 59, 60 },
-            { 61, 62, 63, 64, 65, 66, 67, 68, 69, 70 },
-            { 71, 72, 73, 74, 75, 76, 77, 78, 79, 80 },
-            { 81, 82, 83, 84, 85, 86, 87, 88, 89, 90 },
-            { 91, 92, 93, 94, 95, 96, 97, 98, 99, 100 }
-        });
+        Console.WriteLine("Initializing a 100x100 matrix with random values between 0 and 1...");
+        var rng = new System.Random();
+        var matrix = Matrix<double>.Build.Dense(100, 100, (i, j) => rng.NextDouble());
+        Console.WriteLine("Original Matrix (100x100 with random values):");
+        Console.WriteLine(matrix.ToString()); // This line can be commented out to prevent the matrix from filling the console output
 
-        Console.WriteLine("Original matrix A:");
-        Console.WriteLine(A);
+        Console.WriteLine("Computing the Singular Value Decomposition (SVD) of the matrix...");
+        var svd = matrix.Svd();
+        Console.WriteLine("\nSingular Values:");
+        Console.WriteLine(svd.S.ToString());
 
-        // Perform SVD
-        var svd = A.Svd(true);
+        Console.WriteLine("Selecting the number of singular values we'll retain for our lower-rank approximation...");
+        int lowRank = 5;
 
-        // Determine rank for low-rank approximation
-        int lowRank = 2;
+        Console.WriteLine("Extracting the first 'lowRank' columns from the U matrix of the SVD...");
+        var uMatrix = svd.U.SubMatrix(0, 100, 0, lowRank); // Adjusted size for 100x100 matrix
 
-        // Compute low-rank approximation
-        var sMatrix = Matrix<double>.Build.Dense(lowRank, lowRank, (i, j) => i == j ? svd.S[i] : 0.0);
-        Matrix<double> A_approx = svd.U.SubMatrix(0, A.RowCount, 0, lowRank) *
-                                  sMatrix *
-                                  svd.VT.SubMatrix(0, lowRank, 0, A.ColumnCount);
+        Console.WriteLine("Extracting the first 'lowRank' rows from the V* matrix of the SVD...");
+        var vTMatrix = svd.VT.SubMatrix(0, lowRank, 0, 100); // Adjusted size for 100x100 matrix
 
-        Console.WriteLine("\nLow-rank approximation of A:");
-        Console.WriteLine(A_approx);
+        Console.WriteLine("Creating a diagonal matrix with the first 'lowRank' singular values...");
+        var sMatrix = Matrix<double>.Build.DenseDiagonal(lowRank, lowRank, i => svd.S[i]);
+
+        
+        Console.WriteLine("\nU Matrix (first 5 columns):");
+        Console.WriteLine(uMatrix.ToString());
+
+        Console.WriteLine("\nSingular Values Matrix (50x50 diagonal):");
+        Console.WriteLine(sMatrix.ToString());
+
+        Console.WriteLine("\nV Transposed Matrix (first 5 rows):");
+        Console.WriteLine(vTMatrix.ToString());
+       
+
+        Console.WriteLine("Computing the low-rank approximation by multiplying the U, Σ, and V* matrices together...");
+        var lowRankMatrix = uMatrix * sMatrix * vTMatrix;
+
+        Console.WriteLine("\nLow Rank Approximation:");
+        Console.WriteLine(lowRankMatrix.ToString()); // Commented out to prevent massive output. Uncomment if you want to print the matrix
     }
 }
